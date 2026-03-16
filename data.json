@@ -6,36 +6,6 @@
   },
   "lessons": [
     {
-      "id": 2,
-      "dayOfWeek": 0,
-      "timeStart": "10:45",
-      "timeEnd": "12:15",
-      "subject": "Физика",
-      "teacher": "Петрова А.С.",
-      "room": "215",
-      "type": "Семинар"
-    },
-    {
-      "id": 3,
-      "dayOfWeek": 0,
-      "timeStart": "13:00",
-      "timeEnd": "14:30",
-      "subject": "Программирование",
-      "teacher": "Сидоров К.В.",
-      "room": "410",
-      "type": "Практика"
-    },
-    {
-      "id": 4,
-      "dayOfWeek": 1,
-      "timeStart": "09:00",
-      "timeEnd": "10:30",
-      "subject": "История",
-      "teacher": "Козлова М.П.",
-      "room": "102",
-      "type": "Лекция"
-    },
-    {
       "id": 5,
       "dayOfWeek": 1,
       "timeStart": "10:45",
