@@ -360,11 +360,26 @@ const DEFAULT_DATA = {
   ]
 };
 
-// Try to load from data.json, fallback to DEFAULT_DATA
+// Try to load from localStorage first, then data.json, fallback to DEFAULT_DATA
+const STORAGE_KEY = 'uniapp_data';
 let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
 let dataLoaded = false;
 
 async function loadData() {
+  // 1. Check localStorage first (admin edits persist here)
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      appData = JSON.parse(stored);
+      dataLoaded = true;
+      applySettings();
+      renderCurrentPage();
+      return;
+    } catch(e) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  // 2. Fallback: load from data.json
   try {
     const resp = await fetch('./data.json');
     if (resp.ok) {
@@ -377,10 +392,18 @@ async function loadData() {
 }
 
 function saveData() {
-  // For static hosting, we can't write to server.
-  // Data is stored in memory during session.
-  // For persistent editing, use data.json on your server.
+  // Save all changes to localStorage for persistence
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
   applySettings();
+}
+
+function resetToDefaults() {
+  if (confirm('Сбросить все данные к исходным? Все ваши изменения будут удалены.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    applySettings();
+    renderCurrentPage();
+  }
 }
 
 function applySettings() {
@@ -643,8 +666,9 @@ function renderAdminSettings() {
       </div>
     </div>
     <div class="info-card">
-      <p>Для постоянного сохранения изменений экспортируйте данные и замените файл <code>data.json</code> на сервере.</p>
+      <p>Все изменения сохраняются автоматически и не пропадут при обновлении страницы.</p>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="exportData()">📥 Экспорт data.json</button>
+      <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="resetToDefaults()">🔄 Сбросить к исходным</button>
     </div>`;
 }
 
