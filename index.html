@@ -401,7 +401,21 @@ async function loadData() {
   renderCurrentPage();
 }
 
-async function saveData() {
+async function refreshSha() {
+  try {
+    const resp = await fetch(GH_API + '?ref=' + GH_BRANCH, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (resp.ok) {
+      const meta = await resp.json();
+      fileSha = meta.sha;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+async function saveData(retryOnConflict) {
   applySettings();
   if (isSaving) return;
   if (!ghToken) {
@@ -429,8 +443,20 @@ async function saveData() {
       const result = await resp.json();
       fileSha = result.content.sha;
       showToast('Сохранено для всех', false);
+    } else if (resp.status === 409 || (resp.status === 422 && !retryOnConflict)) {
+      // SHA конфликт — перезагружаем SHA и пробуем снова
+      isSaving = false;
+      const refreshed = await refreshSha();
+      if (refreshed) {
+        return saveData(true);
+      } else {
+        showToast('Ошибка синхронизации. Обновите страницу.', true);
+      }
+      return;
     } else if (resp.status === 401) {
       showToast('Неверный GitHub Token', true);
+    } else if (resp.status === 403) {
+      showToast('Токен истёк или нет прав. Создайте новый токен.', true);
     } else {
       showToast('Ошибка сохранения: ' + resp.status, true);
     }
