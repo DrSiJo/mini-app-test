@@ -330,78 +330,93 @@ textarea { resize: vertical; min-height: 80px; }
 
 <script>
 // ============================================================
-// DATA STORE — редактируйте data.json или меняйте данные здесь
+// ОБЛАЧНОЕ ХРАНИЛИЩЕ — данные видны ВСЕМ пользователям
 // ============================================================
+const BLOB_ID = '019cf8b4-492e-767b-be06-834ed1e1446f';
+const BLOB_API = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
+
 const DEFAULT_DATA = {
   settings: {
     universityName: "Мой Университет",
     groupName: "Группа 101",
     adminPassword: "admin123"
   },
-  lessons: [
-    { id: 1, dayOfWeek: 0, timeStart: "09:00", timeEnd: "10:30", subject: "Математический анализ", teacher: "Иванов И.И.", room: "301", type: "Лекция" },
-    { id: 2, dayOfWeek: 0, timeStart: "10:45", timeEnd: "12:15", subject: "Физика", teacher: "Петрова А.С.", room: "215", type: "Семинар" },
-    { id: 3, dayOfWeek: 0, timeStart: "13:00", timeEnd: "14:30", subject: "Программирование", teacher: "Сидоров К.В.", room: "410", type: "Практика" },
-    { id: 4, dayOfWeek: 1, timeStart: "09:00", timeEnd: "10:30", subject: "История", teacher: "Козлова М.П.", room: "102", type: "Лекция" },
-    { id: 5, dayOfWeek: 1, timeStart: "10:45", timeEnd: "12:15", subject: "Английский язык", teacher: "Смирнова Е.А.", room: "305", type: "Практика" },
-    { id: 6, dayOfWeek: 2, timeStart: "09:00", timeEnd: "10:30", subject: "Математический анализ", teacher: "Иванов И.И.", room: "301", type: "Семинар" },
-    { id: 7, dayOfWeek: 2, timeStart: "10:45", timeEnd: "12:15", subject: "Программирование", teacher: "Сидоров К.В.", room: "410", type: "Лаб" },
-    { id: 8, dayOfWeek: 2, timeStart: "13:00", timeEnd: "14:30", subject: "Физика", teacher: "Петрова А.С.", room: "215", type: "Лекция" },
-    { id: 9, dayOfWeek: 3, timeStart: "09:00", timeEnd: "10:30", subject: "Философия", teacher: "Волков Д.Н.", room: "201", type: "Лекция" },
-    { id: 10, dayOfWeek: 3, timeStart: "10:45", timeEnd: "12:15", subject: "Английский язык", teacher: "Смирнова Е.А.", room: "305", type: "Практика" },
-    { id: 11, dayOfWeek: 4, timeStart: "09:00", timeEnd: "10:30", subject: "Физика", teacher: "Петрова А.С.", room: "215", type: "Лаб" },
-    { id: 12, dayOfWeek: 4, timeStart: "10:45", timeEnd: "12:15", subject: "Программирование", teacher: "Сидоров К.В.", room: "410", type: "Лекция" },
-    { id: 13, dayOfWeek: 5, timeStart: "09:00", timeEnd: "10:30", subject: "Физкультура", teacher: "Морозов В.Г.", room: "Спортзал", type: "Практика" }
-  ],
-  news: [
-    { id: 1, title: "Начало весеннего семестра", content: "Занятия начинаются 1 февраля. Просьба ознакомиться с расписанием заранее.", date: "2026-02-01", pinned: 1 },
-    { id: 2, title: "Конференция по информатике", content: "15 марта состоится студенческая конференция по информатике в аудитории 501. Регистрация открыта.", date: "2026-03-10", pinned: 0 },
-    { id: 3, title: "Изменения в расписании", content: "С 20 марта пара по философии переносится с четверга на пятницу.", date: "2026-03-15", pinned: 0 }
-  ]
+  lessons: [],
+  news: []
 };
 
-// Try to load from localStorage first, then data.json, fallback to DEFAULT_DATA
-const STORAGE_KEY = 'uniapp_data';
 let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
 let dataLoaded = false;
+let isSaving = false;
+
+// Показать/скрыть индикатор загрузки
+function showToast(msg, isError) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:200;transition:opacity 0.3s;font-family:inherit;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.background = isError ? 'var(--red)' : 'var(--green)';
+  toast.style.color = '#fff';
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
 
 async function loadData() {
-  // 1. Check localStorage first (admin edits persist here)
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      appData = JSON.parse(stored);
-      dataLoaded = true;
-      applySettings();
-      renderCurrentPage();
-      return;
-    } catch(e) {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }
-  // 2. Fallback: load from data.json
   try {
-    const resp = await fetch('./data.json');
+    const resp = await fetch(BLOB_API, {
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    });
     if (resp.ok) {
       appData = await resp.json();
       dataLoaded = true;
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Облако недоступно, используем fallback:', e);
+    // Fallback: load from data.json
+    try {
+      const resp = await fetch('./data.json');
+      if (resp.ok) {
+        appData = await resp.json();
+        dataLoaded = true;
+      }
+    } catch(e2) {}
+  }
   applySettings();
   renderCurrentPage();
 }
 
-function saveData() {
-  // Save all changes to localStorage for persistence
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+async function saveData() {
   applySettings();
+  if (isSaving) return;
+  isSaving = true;
+  try {
+    const resp = await fetch(BLOB_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(appData)
+    });
+    if (resp.ok) {
+      showToast('✓ Сохранено для всех', false);
+    } else {
+      showToast('✗ Ошибка сохранения', true);
+    }
+  } catch(e) {
+    showToast('✗ Нет подключения', true);
+    console.error('Ошибка сохранения:', e);
+  }
+  isSaving = false;
 }
 
 function resetToDefaults() {
-  if (confirm('Сбросить все данные к исходным? Все ваши изменения будут удалены.')) {
-    localStorage.removeItem(STORAGE_KEY);
+  if (confirm('Сбросить все данные к исходным? Все изменения будут удалены для ВСЕХ пользователей.')) {
     appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-    applySettings();
+    appData.settings.adminPassword = 'admin123';
+    saveData();
     renderCurrentPage();
   }
 }
@@ -666,7 +681,7 @@ function renderAdminSettings() {
       </div>
     </div>
     <div class="info-card">
-      <p>Все изменения сохраняются автоматически и не пропадут при обновлении страницы.</p>
+      <p>☁️ Все изменения сохраняются в облако и видны <b>всем</b> пользователям приложения.</p>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="exportData()">📥 Экспорт data.json</button>
       <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="resetToDefaults()">🔄 Сбросить к исходным</button>
     </div>`;
