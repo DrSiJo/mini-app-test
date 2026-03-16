@@ -379,7 +379,11 @@ async function loadData() {
     if (resp.ok) {
       const meta = await resp.json();
       fileSha = meta.sha;
-      const content = atob(meta.content.replace(/\n/g, ''));
+      // Декодирование Base64 с поддержкой UTF-8
+      const raw = atob(meta.content.replace(/\n/g, ''));
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      const content = new TextDecoder('utf-8').decode(bytes);
       appData = JSON.parse(content);
       dataLoaded = true;
     }
