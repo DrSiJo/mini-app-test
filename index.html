@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>UniApp — Расписание и новости</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #6b7280;
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --primary-dark: #1d4ed8;
+  --border: #e5e7eb;
+  --green: #059669;
+  --green-light: #d1fae5;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.dark {
+  --bg: #0f1117;
+  --surface: #1a1b23;
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+  --primary: #3b82f6;
+  --primary-light: #1e3a5f;
+  --primary-dark: #60a5fa;
+  --border: #2d2e3a;
+  --green-light: #064e3b;
+  --amber-light: #78350f;
+  --purple-light: #2e1065;
+  --red-light: #450a0a;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 72px;
+}
+
+/* ---- Header ---- */
+.header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+  backdrop-filter: blur(12px);
+}
+.header-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--primary-light); display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.header-text h1 { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.header-text p { font-size: 12px; color: var(--text-muted); }
+
+/* ---- Bottom Nav ---- */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; padding: 6px 0;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px; cursor: pointer; border: none; background: none;
+  color: var(--text-muted); font-size: 11px; font-weight: 500;
+  font-family: inherit; transition: color 0.15s;
+}
+.nav-item.active { color: var(--primary); }
+.nav-item svg { width: 22px; height: 22px; }
+
+/* ---- Main Content ---- */
+.content { max-width: 480px; margin: 0 auto; padding: 16px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ---- Day Tabs ---- */
+.day-tabs {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+  margin-bottom: 16px; -webkit-overflow-scrolling: touch;
+}
+.day-tabs::-webkit-scrollbar { display: none; }
+.day-tab {
+  flex-shrink: 0; padding: 10px 18px; border-radius: 12px;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  border: none; background: var(--surface); color: var(--text-muted);
+  font-family: inherit; transition: all 0.15s;
+  box-shadow: var(--shadow);
+}
+.day-tab.active {
+  background: var(--primary); color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+}
+.day-title { font-size: 18px; font-weight: 600; margin-bottom: 14px; }
+
+/* ---- Lesson Card ---- */
+.lesson-card {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 12px;
+  border: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+  box-shadow: var(--shadow);
+}
+.lesson-info { flex: 1; min-width: 0; }
+.lesson-type {
+  display: inline-block; font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: 6px; margin-bottom: 8px;
+}
+.lesson-type.lecture { background: var(--primary-light); color: var(--primary); }
+.lesson-type.seminar { background: var(--green-light); color: var(--green); }
+.lesson-type.practice { background: var(--amber-light); color: var(--amber); }
+.lesson-type.lab { background: var(--purple-light); color: var(--purple); }
+.lesson-num { font-size: 12px; color: var(--text-muted); margin-left: 8px; font-weight: 500; }
+.lesson-subject { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.lesson-detail {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-muted); margin-bottom: 4px;
+}
+.lesson-detail svg { width: 14px; height: 14px; flex-shrink: 0; }
+.lesson-time-big {
+  text-align: right; flex-shrink: 0; margin-left: 12px;
+}
+.lesson-time-big .hour { font-size: 28px; font-weight: 700; color: var(--primary); line-height: 1; }
+.lesson-time-big .minute { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+/* ---- News ---- */
+.section-title { font-size: 18px; font-weight: 600; margin-bottom: 14px; }
+.news-card {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.news-card.pinned { border-color: var(--primary); background: var(--primary-light); }
+.news-pinned {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--primary);
+  margin-bottom: 6px;
+}
+.news-pinned svg { width: 14px; height: 14px; }
+.news-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.news-content { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
+.news-date { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+.news-date svg { width: 13px; height: 13px; }
+
+/* ---- Empty State ---- */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px;
+  color: var(--text-muted); text-align: center;
+}
+.empty-state svg { width: 48px; height: 48px; opacity: 0.4; margin-bottom: 12px; }
+.empty-state p { font-size: 15px; font-weight: 500; }
+.empty-state span { font-size: 13px; margin-top: 4px; }
+
+/* ---- Admin ---- */
+.admin-login {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 60vh; padding: 20px;
+}
+.admin-login-card {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 32px 24px; width: 100%; max-width: 340px;
+  border: 1px solid var(--border); text-align: center;
+}
+.admin-login-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: var(--primary-light); display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px; font-size: 24px;
+}
+.admin-login-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.admin-login-card .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+input, textarea, select {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px; font-family: inherit;
+  background: var(--surface); color: var(--text);
+  outline: none; transition: border-color 0.15s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+textarea { resize: vertical; min-height: 80px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 20px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: none; font-family: inherit; transition: all 0.15s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-ghost { background: transparent; color: var(--text-muted); }
+.btn-ghost:hover { background: var(--primary-light); color: var(--primary); }
+.btn-danger { background: transparent; color: var(--red); }
+.btn-danger:hover { background: var(--red-light); }
+.btn-full { width: 100%; }
+.error-msg { color: var(--red); font-size: 13px; margin-top: 8px; }
+
+/* Admin tabs */
+.admin-tabs { display: flex; gap: 4px; background: var(--bg); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 16px; }
+.admin-tab {
+  flex: 1; padding: 8px; border-radius: 8px; border: none;
+  background: transparent; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: inherit; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  transition: all 0.15s;
+}
+.admin-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.admin-tab svg { width: 16px; height: 16px; }
+
+.admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.admin-header h3 { font-size: 15px; font-weight: 600; }
+.admin-day-label { font-size: 13px; font-weight: 500; color: var(--text-muted); margin: 16px 0 8px; }
+.admin-item {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 12px; margin-bottom: 8px; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.admin-item-info p { font-size: 14px; font-weight: 500; }
+.admin-item-info span { font-size: 12px; color: var(--text-muted); }
+.admin-item-actions { display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px; }
+.icon-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: none;
+  background: transparent; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+}
+.icon-btn:hover { background: var(--primary-light); }
+.icon-btn.danger:hover { background: var(--red-light); }
+.icon-btn svg { width: 16px; height: 16px; }
+.icon-btn.danger svg { color: var(--red); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 100; display: none; align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 24px; width: 100%; max-width: 480px; max-height: 85vh;
+  overflow-y: auto;
+}
+.modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; display: block; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.setting-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.setting-row input { flex: 1; }
+.info-card {
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 14px; margin-top: 16px;
+}
+.info-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.info-card code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-icon">🎓</div>
+  <div class="header-text">
+    <h1 id="headerUniName">Мой Университет</h1>
+    <p id="headerGroupName">Группа 101</p>
+  </div>
+</div>
+
+<!-- Pages -->
+<div class="content">
+  <!-- Schedule Page -->
+  <div id="schedulePage" class="page active">
+    <div class="day-tabs" id="dayTabs"></div>
+    <div class="day-title" id="dayTitle"></div>
+    <div id="lessonsList"></div>
+  </div>
+
+  <!-- News Page -->
+  <div id="newsPage" class="page">
+    <div class="section-title">Новости</div>
+    <div id="newsList"></div>
+  </div>
+
+  <!-- Admin Page -->
+  <div id="adminPage" class="page">
+    <div id="adminContent"></div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-item active" data-page="schedule" onclick="switchPage('schedule')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+    <span>Расписание</span>
+  </button>
+  <button class="nav-item" data-page="news" onclick="switchPage('news')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+    <span>Новости</span>
+  </button>
+  <button class="nav-item" data-page="admin" onclick="switchPage('admin')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span>Админ</span>
+  </button>
+</nav>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ============================================================
+// DATA STORE — редактируйте data.json или меняйте данные здесь
+// ============================================================
+const DEFAULT_DATA = {
+  settings: {
+    universityName: "Мой Университет",
+    groupName: "Группа 101",
+    adminPassword: "admin123"
+  },
+  lessons: [
+    { id: 1, dayOfWeek: 0, timeStart: "09:00", timeEnd: "10:30", subject: "Математический анализ", teacher: "Иванов И.И.", room: "301", type: "Лекция" },
+    { id: 2, dayOfWeek: 0, timeStart: "10:45", timeEnd: "12:15", subject: "Физика", teacher: "Петрова А.С.", room: "215", type: "Семинар" },
+    { id: 3, dayOfWeek: 0, timeStart: "13:00", timeEnd: "14:30", subject: "Программирование", teacher: "Сидоров К.В.", room: "410", type: "Практика" },
+    { id: 4, dayOfWeek: 1, timeStart: "09:00", timeEnd: "10:30", subject: "История", teacher: "Козлова М.П.", room: "102", type: "Лекция" },
+    { id: 5, dayOfWeek: 1, timeStart: "10:45", timeEnd: "12:15", subject: "Английский язык", teacher: "Смирнова Е.А.", room: "305", type: "Практика" },
+    { id: 6, dayOfWeek: 2, timeStart: "09:00", timeEnd: "10:30", subject: "Математический анализ", teacher: "Иванов И.И.", room: "301", type: "Семинар" },
+    { id: 7, dayOfWeek: 2, timeStart: "10:45", timeEnd: "12:15", subject: "Программирование", teacher: "Сидоров К.В.", room: "410", type: "Лаб" },
+    { id: 8, dayOfWeek: 2, timeStart: "13:00", timeEnd: "14:30", subject: "Физика", teacher: "Петрова А.С.", room: "215", type: "Лекция" },
+    { id: 9, dayOfWeek: 3, timeStart: "09:00", timeEnd: "10:30", subject: "Философия", teacher: "Волков Д.Н.", room: "201", type: "Лекция" },
+    { id: 10, dayOfWeek: 3, timeStart: "10:45", timeEnd: "12:15", subject: "Английский язык", teacher: "Смирнова Е.А.", room: "305", type: "Практика" },
+    { id: 11, dayOfWeek: 4, timeStart: "09:00", timeEnd: "10:30", subject: "Физика", teacher: "Петрова А.С.", room: "215", type: "Лаб" },
+    { id: 12, dayOfWeek: 4, timeStart: "10:45", timeEnd: "12:15", subject: "Программирование", teacher: "Сидоров К.В.", room: "410", type: "Лекция" },
+    { id: 13, dayOfWeek: 5, timeStart: "09:00", timeEnd: "10:30", subject: "Физкультура", teacher: "Морозов В.Г.", room: "Спортзал", type: "Практика" }
+  ],
+  news: [
+    { id: 1, title: "Начало весеннего семестра", content: "Занятия начинаются 1 февраля. Просьба ознакомиться с расписанием заранее.", date: "2026-02-01", pinned: 1 },
+    { id: 2, title: "Конференция по информатике", content: "15 марта состоится студенческая конференция по информатике в аудитории 501. Регистрация открыта.", date: "2026-03-10", pinned: 0 },
+    { id: 3, title: "Изменения в расписании", content: "С 20 марта пара по философии переносится с четверга на пятницу.", date: "2026-03-15", pinned: 0 }
+  ]
+};
+
+// Try to load from data.json, fallback to DEFAULT_DATA
+let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+let dataLoaded = false;
+
+async function loadData() {
+  try {
+    const resp = await fetch('./data.json');
+    if (resp.ok) {
+      appData = await resp.json();
+      dataLoaded = true;
+    }
+  } catch(e) {}
+  applySettings();
+  renderCurrentPage();
+}
+
+function saveData() {
+  // For static hosting, we can't write to server.
+  // Data is stored in memory during session.
+  // For persistent editing, use data.json on your server.
+  applySettings();
+}
+
+function applySettings() {
+  document.getElementById('headerUniName').textContent = appData.settings.universityName;
+  document.getElementById('headerGroupName').textContent = appData.settings.groupName;
+}
+
+// ============================================================
+// TELEGRAM WEBAPP
+// ============================================================
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  if (tg.colorScheme === 'dark') document.documentElement.classList.add('dark');
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const DAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+let currentPage = 'schedule';
+let selectedDay = (new Date().getDay() || 7) - 1; // 0=Mon
+if (selectedDay > 5) selectedDay = 0;
+let adminLoggedIn = false;
+let adminTab = 'schedule';
+
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(page + 'Page').classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  renderCurrentPage();
+}
+
+function renderCurrentPage() {
+  if (currentPage === 'schedule') renderSchedule();
+  else if (currentPage === 'news') renderNews();
+  else if (currentPage === 'admin') renderAdmin();
+}
+
+// ============================================================
+// SCHEDULE
+// ============================================================
+function renderSchedule() {
+  const tabsEl = document.getElementById('dayTabs');
+  tabsEl.innerHTML = DAYS.map((d, i) =>
+    `<button class="day-tab ${i === selectedDay ? 'active' : ''}" onclick="selectDay(${i})">${d}</button>`
+  ).join('');
+
+  document.getElementById('dayTitle').textContent = DAYS_FULL[selectedDay];
+
+  const lessons = appData.lessons
+    .filter(l => l.dayOfWeek === selectedDay)
+    .sort((a, b) => a.timeStart.localeCompare(b.timeStart));
+
+  const listEl = document.getElementById('lessonsList');
+  if (lessons.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        <p>Нет занятий</p>
+        <span>В этот день пар нет</span>
+      </div>`;
+    return;
+  }
+
+  const typeClass = { 'Лекция': 'lecture', 'Семинар': 'seminar', 'Практика': 'practice', 'Лаб': 'lab' };
+
+  listEl.innerHTML = lessons.map((l, idx) => {
+    const [h, m] = l.timeStart.split(':');
+    return `
+    <div class="lesson-card">
+      <div class="lesson-info">
+        <div><span class="lesson-type ${typeClass[l.type] || ''}">${l.type}</span><span class="lesson-num">Пара ${idx + 1}</span></div>
+        <div class="lesson-subject">${l.subject}</div>
+        <div class="lesson-detail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          ${l.timeStart} – ${l.timeEnd}
+        </div>
+        <div class="lesson-detail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          ${l.teacher}
+        </div>
+        <div class="lesson-detail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Ауд. ${l.room}
+        </div>
+      </div>
+      <div class="lesson-time-big">
+        <div class="hour">${h}</div>
+        <div class="minute">:${m}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectDay(idx) {
+  selectedDay = idx;
+  renderSchedule();
+}
+
+// ============================================================
+// NEWS
+// ============================================================
+function renderNews() {
+  const items = [...appData.news].sort((a, b) => {
+    if (a.pinned !== b.pinned) return b.pinned - a.pinned;
+    return b.date.localeCompare(a.date);
+  });
+
+  const listEl = document.getElementById('newsList');
+  if (items.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/></svg>
+        <p>Нет новостей</p>
+        <span>Здесь появятся новости университета</span>
+      </div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map(n => {
+    const dateStr = new Date(n.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `
+    <div class="news-card ${n.pinned ? 'pinned' : ''}">
+      ${n.pinned ? `<div class="news-pinned"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> Закреплено</div>` : ''}
+      <div class="news-title">${n.title}</div>
+      <div class="news-content">${n.content}</div>
+      <div class="news-date">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        ${dateStr}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+function renderAdmin() {
+  const el = document.getElementById('adminContent');
+  if (!adminLoggedIn) {
+    el.innerHTML = `
+      <div class="admin-login">
+        <div class="admin-login-card">
+          <div class="admin-login-icon">🔐</div>
+          <h2>Панель управления</h2>
+          <p class="subtitle">Введите пароль администратора</p>
+          <input type="password" id="adminPwInput" placeholder="Пароль" onkeydown="if(event.key==='Enter')adminLogin()">
+          <div id="adminError" class="error-msg" style="display:none"></div>
+          <button class="btn btn-primary btn-full" style="margin-top:14px" onclick="adminLogin()">Войти</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const tabIcons = {
+    schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>',
+    news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>'
+  };
+
+  let tabsHTML = `<div class="admin-tabs">
+    ${['schedule', 'news', 'settings'].map(t =>
+      `<button class="admin-tab ${adminTab === t ? 'active' : ''}" onclick="adminTab='${t}';renderAdmin()">
+        ${tabIcons[t]} ${t === 'schedule' ? 'Расписание' : t === 'news' ? 'Новости' : 'Настройки'}
+      </button>`
+    ).join('')}
+  </div>`;
+
+  let contentHTML = '';
+  if (adminTab === 'schedule') {
+    contentHTML = renderAdminSchedule();
+  } else if (adminTab === 'news') {
+    contentHTML = renderAdminNews();
+  } else {
+    contentHTML = renderAdminSettings();
+  }
+
+  el.innerHTML = tabsHTML + contentHTML;
+}
+
+function renderAdminSchedule() {
+  let html = `<div class="admin-header"><h3>Управление расписанием</h3>
+    <button class="btn btn-primary btn-sm" onclick="openLessonModal()">+ Добавить</button></div>`;
+
+  DAYS_FULL.forEach((day, idx) => {
+    const dayLessons = appData.lessons.filter(l => l.dayOfWeek === idx).sort((a, b) => a.timeStart.localeCompare(b.timeStart));
+    if (dayLessons.length === 0) return;
+    html += `<div class="admin-day-label">${day}</div>`;
+    dayLessons.forEach(l => {
+      html += `<div class="admin-item">
+        <div class="admin-item-info">
+          <p>${l.subject}</p>
+          <span>${l.timeStart}–${l.timeEnd} · ${l.room} · ${l.type}</span>
+        </div>
+        <div class="admin-item-actions">
+          <button class="icon-btn" onclick="openLessonModal(${l.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn danger" onclick="deleteLesson(${l.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </button>
+        </div>
+      </div>`;
+    });
+  });
+  return html;
+}
+
+function renderAdminNews() {
+  let html = `<div class="admin-header"><h3>Управление новостями</h3>
+    <button class="btn btn-primary btn-sm" onclick="openNewsModal()">+ Добавить</button></div>`;
+
+  const items = [...appData.news].sort((a, b) => b.pinned - a.pinned || b.date.localeCompare(a.date));
+  items.forEach(n => {
+    html += `<div class="admin-item">
+      <div class="admin-item-info">
+        <p>${n.pinned ? '📌 ' : ''}${n.title}</p>
+        <span>${n.date}</span>
+      </div>
+      <div class="admin-item-actions">
+        <button class="icon-btn" onclick="openNewsModal(${n.id})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn danger" onclick="deleteNews(${n.id})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderAdminSettings() {
+  return `
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">Настройки</h3>
+    <div class="form-group">
+      <label class="form-label">Название университета</label>
+      <div class="setting-row">
+        <input id="settingUniName" value="${appData.settings.universityName}">
+        <button class="btn btn-primary btn-sm" onclick="saveSetting('universityName', document.getElementById('settingUniName').value)">OK</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Группа</label>
+      <div class="setting-row">
+        <input id="settingGroupName" value="${appData.settings.groupName}">
+        <button class="btn btn-primary btn-sm" onclick="saveSetting('groupName', document.getElementById('settingGroupName').value)">OK</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Пароль администратора</label>
+      <div class="setting-row">
+        <input id="settingAdminPw" type="password" value="${appData.settings.adminPassword}">
+        <button class="btn btn-primary btn-sm" onclick="saveSetting('adminPassword', document.getElementById('settingAdminPw').value)">OK</button>
+      </div>
+    </div>
+    <div class="info-card">
+      <p>Для постоянного сохранения изменений экспортируйте данные и замените файл <code>data.json</code> на сервере.</p>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="exportData()">📥 Экспорт data.json</button>
+    </div>`;
+}
+
+function adminLogin() {
+  const pw = document.getElementById('adminPwInput').value;
+  if (pw === appData.settings.adminPassword) {
+    adminLoggedIn = true;
+    renderAdmin();
+  } else {
+    const errEl = document.getElementById('adminError');
+    errEl.textContent = 'Неверный пароль';
+    errEl.style.display = 'block';
+  }
+}
+
+function saveSetting(key, value) {
+  appData.settings[key] = value;
+  saveData();
+  renderAdmin();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data.json';
+  a.click();
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function openLessonModal(id) {
+  const lesson = id ? appData.lessons.find(l => l.id === id) : null;
+  const isEdit = !!lesson;
+  openModal(`
+    <h3>${isEdit ? 'Редактировать пару' : 'Новая пара'}</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">День</label>
+        <select id="mDay">${DAYS_FULL.map((d, i) => `<option value="${i}" ${lesson && lesson.dayOfWeek === i ? 'selected' : ''}>${d}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Тип</label>
+        <select id="mType">${['Лекция','Семинар','Практика','Лаб'].map(t => `<option ${lesson && lesson.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Начало</label>
+        <input type="time" id="mTimeStart" value="${lesson ? lesson.timeStart : '09:00'}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Конец</label>
+        <input type="time" id="mTimeEnd" value="${lesson ? lesson.timeEnd : '10:30'}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Предмет</label>
+      <input id="mSubject" value="${lesson ? lesson.subject : ''}" placeholder="Название предмета">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Преподаватель</label>
+      <input id="mTeacher" value="${lesson ? lesson.teacher : ''}" placeholder="ФИО преподавателя">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Аудитория</label>
+      <input id="mRoom" value="${lesson ? lesson.room : ''}" placeholder="Номер аудитории">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveLesson(${id || 0})">${isEdit ? 'Сохранить' : 'Добавить'}</button>
+  `);
+}
+
+function saveLesson(id) {
+  const data = {
+    dayOfWeek: parseInt(document.getElementById('mDay').value),
+    timeStart: document.getElementById('mTimeStart').value,
+    timeEnd: document.getElementById('mTimeEnd').value,
+    subject: document.getElementById('mSubject').value,
+    teacher: document.getElementById('mTeacher').value,
+    room: document.getElementById('mRoom').value,
+    type: document.getElementById('mType').value,
+  };
+  if (!data.subject) return;
+
+  if (id) {
+    const idx = appData.lessons.findIndex(l => l.id === id);
+    if (idx >= 0) appData.lessons[idx] = { ...appData.lessons[idx], ...data };
+  } else {
+    const maxId = appData.lessons.reduce((m, l) => Math.max(m, l.id), 0);
+    appData.lessons.push({ id: maxId + 1, ...data });
+  }
+  saveData();
+  closeModal();
+  renderAdmin();
+}
+
+function deleteLesson(id) {
+  appData.lessons = appData.lessons.filter(l => l.id !== id);
+  saveData();
+  renderAdmin();
+}
+
+function openNewsModal(id) {
+  const item = id ? appData.news.find(n => n.id === id) : null;
+  const isEdit = !!item;
+  openModal(`
+    <h3>${isEdit ? 'Редактировать новость' : 'Новая новость'}</h3>
+    <div class="form-group">
+      <label class="form-label">Заголовок</label>
+      <input id="mNTitle" value="${item ? item.title : ''}" placeholder="Заголовок новости">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Содержание</label>
+      <textarea id="mNContent" placeholder="Текст новости">${item ? item.content : ''}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Дата</label>
+        <input type="date" id="mNDate" value="${item ? item.date : new Date().toISOString().split('T')[0]}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Закрепить</label>
+        <select id="mNPinned">
+          <option value="0" ${item && !item.pinned ? 'selected' : ''}>Нет</option>
+          <option value="1" ${item && item.pinned ? 'selected' : ''}>Да</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveNews(${id || 0})">${isEdit ? 'Сохранить' : 'Добавить'}</button>
+  `);
+}
+
+function saveNews(id) {
+  const data = {
+    title: document.getElementById('mNTitle').value,
+    content: document.getElementById('mNContent').value,
+    date: document.getElementById('mNDate').value,
+    pinned: parseInt(document.getElementById('mNPinned').value),
+  };
+  if (!data.title) return;
+
+  if (id) {
+    const idx = appData.news.findIndex(n => n.id === id);
+    if (idx >= 0) appData.news[idx] = { ...appData.news[idx], ...data };
+  } else {
+    const maxId = appData.news.reduce((m, n) => Math.max(m, n.id), 0);
+    appData.news.push({ id: maxId + 1, ...data });
+  }
+  saveData();
+  closeModal();
+  renderAdmin();
+}
+
+function deleteNews(id) {
+  appData.news = appData.news.filter(n => n.id !== id);
+  saveData();
+  renderAdmin();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadData();
+</script>
+</body>
+</html>

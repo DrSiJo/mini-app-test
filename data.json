@@ -1,0 +1,27 @@
+{
+  "settings": {
+    "universityName": "Мой Университет",
+    "groupName": "Группа 101",
+    "adminPassword": "admin123"
+  },
+  "lessons": [
+    { "id": 1, "dayOfWeek": 0, "timeStart": "09:00", "timeEnd": "10:30", "subject": "Математический анализ", "teacher": "Иванов И.И.", "room": "301", "type": "Лекция" },
+    { "id": 2, "dayOfWeek": 0, "timeStart": "10:45", "timeEnd": "12:15", "subject": "Физика", "teacher": "Петрова А.С.", "room": "215", "type": "Семинар" },
+    { "id": 3, "dayOfWeek": 0, "timeStart": "13:00", "timeEnd": "14:30", "subject": "Программирование", "teacher": "Сидоров К.В.", "room": "410", "type": "Практика" },
+    { "id": 4, "dayOfWeek": 1, "timeStart": "09:00", "timeEnd": "10:30", "subject": "История", "teacher": "Козлова М.П.", "room": "102", "type": "Лекция" },
+    { "id": 5, "dayOfWeek": 1, "timeStart": "10:45", "timeEnd": "12:15", "subject": "Английский язык", "teacher": "Смирнова Е.А.", "room": "305", "type": "Практика" },
+    { "id": 6, "dayOfWeek": 2, "timeStart": "09:00", "timeEnd": "10:30", "subject": "Математический анализ", "teacher": "Иванов И.И.", "room": "301", "type": "Семинар" },
+    { "id": 7, "dayOfWeek": 2, "timeStart": "10:45", "timeEnd": "12:15", "subject": "Программирование", "teacher": "Сидоров К.В.", "room": "410", "type": "Лаб" },
+    { "id": 8, "dayOfWeek": 2, "timeStart": "13:00", "timeEnd": "14:30", "subject": "Физика", "teacher": "Петрова А.С.", "room": "215", "type": "Лекция" },
+    { "id": 9, "dayOfWeek": 3, "timeStart": "09:00", "timeEnd": "10:30", "subject": "Философия", "teacher": "Волков Д.Н.", "room": "201", "type": "Лекция" },
+    { "id": 10, "dayOfWeek": 3, "timeStart": "10:45", "timeEnd": "12:15", "subject": "Английский язык", "teacher": "Смирнова Е.А.", "room": "305", "type": "Практика" },
+    { "id": 11, "dayOfWeek": 4, "timeStart": "09:00", "timeEnd": "10:30", "subject": "Физика", "teacher": "Петрова А.С.", "room": "215", "type": "Лаб" },
+    { "id": 12, "dayOfWeek": 4, "timeStart": "10:45", "timeEnd": "12:15", "subject": "Программирование", "teacher": "Сидоров К.В.", "room": "410", "type": "Лекция" },
+    { "id": 13, "dayOfWeek": 5, "timeStart": "09:00", "timeEnd": "10:30", "subject": "Физкультура", "teacher": "Морозов В.Г.", "room": "Спортзал", "type": "Практика" }
+  ],
+  "news": [
+    { "id": 1, "title": "Начало весеннего семестра", "content": "Занятия начинаются 1 февраля. Просьба ознакомиться с расписанием заранее.", "date": "2026-02-01", "pinned": 1 },
+    { "id": 2, "title": "Конференция по информатике", "content": "15 марта состоится студенческая конференция по информатике в аудитории 501. Регистрация открыта.", "date": "2026-03-10", "pinned": 0 },
+    { "id": 3, "title": "Изменения в расписании", "content": "С 20 марта пара по философии переносится с четверга на пятницу.", "date": "2026-03-15", "pinned": 0 }
+  ]
+}
