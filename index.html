@@ -330,10 +330,13 @@ textarea { resize: vertical; min-height: 80px; }
 
 <script>
 // ============================================================
-// ОБЛАЧНОЕ ХРАНИЛИЩЕ — данные видны ВСЕМ пользователям
+// ОБЛАЧНОЕ ХРАНИЛИЩЕ — GitHub API (данные видны ВСЕМ)
 // ============================================================
-const BLOB_ID = '019cf8b4-492e-767b-be06-834ed1e1446f';
-const BLOB_API = `https://jsonblob.com/api/jsonBlob/${BLOB_ID}`;
+const GH_OWNER = 'DrSiJo';
+const GH_REPO = 'mini-app-test';
+const GH_FILE = 'data.json';
+const GH_BRANCH = 'main';
+const GH_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
 
 const DEFAULT_DATA = {
   settings: {
@@ -348,8 +351,9 @@ const DEFAULT_DATA = {
 let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
 let dataLoaded = false;
 let isSaving = false;
+let fileSha = null; // SHA файла для GitHub API (нужен для обновления)
+let ghToken = localStorage.getItem('gh_token') || '';
 
-// Показать/скрыть индикатор загрузки
 function showToast(msg, isError) {
   let toast = document.getElementById('toast');
   if (!toast) {
@@ -368,16 +372,19 @@ function showToast(msg, isError) {
 
 async function loadData() {
   try {
-    const resp = await fetch(BLOB_API, {
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    // Загружаем через GitHub API (поддерживает CORS)
+    const resp = await fetch(GH_API + '?ref=' + GH_BRANCH, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
     });
     if (resp.ok) {
-      appData = await resp.json();
+      const meta = await resp.json();
+      fileSha = meta.sha;
+      const content = atob(meta.content.replace(/\n/g, ''));
+      appData = JSON.parse(content);
       dataLoaded = true;
     }
   } catch(e) {
-    console.warn('Облако недоступно, используем fallback:', e);
-    // Fallback: load from data.json
+    console.warn('GitHub API недоступен, используем fallback:', e);
     try {
       const resp = await fetch('./data.json');
       if (resp.ok) {
@@ -393,20 +400,38 @@ async function loadData() {
 async function saveData() {
   applySettings();
   if (isSaving) return;
+  if (!ghToken) {
+    showToast('Введите GitHub Token в настройках', true);
+    return;
+  }
   isSaving = true;
   try {
-    const resp = await fetch(BLOB_API, {
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(appData, null, 2))));
+    const body = {
+      message: 'Обновление данных из Mini App',
+      content: content,
+      branch: GH_BRANCH
+    };
+    if (fileSha) body.sha = fileSha;
+    const resp = await fetch(GH_API, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(appData)
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': 'token ' + ghToken
+      },
+      body: JSON.stringify(body)
     });
     if (resp.ok) {
-      showToast('✓ Сохранено для всех', false);
+      const result = await resp.json();
+      fileSha = result.content.sha;
+      showToast('Сохранено для всех', false);
+    } else if (resp.status === 401) {
+      showToast('Неверный GitHub Token', true);
     } else {
-      showToast('✗ Ошибка сохранения', true);
+      showToast('Ошибка сохранения: ' + resp.status, true);
     }
   } catch(e) {
-    showToast('✗ Нет подключения', true);
+    showToast('Нет подключения', true);
     console.error('Ошибка сохранения:', e);
   }
   isSaving = false;
@@ -680,11 +705,25 @@ function renderAdminSettings() {
         <button class="btn btn-primary btn-sm" onclick="saveSetting('adminPassword', document.getElementById('settingAdminPw').value)">OK</button>
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">🔑 GitHub Token (для сохранения изменений)</label>
+      <div class="setting-row">
+        <input id="settingGhToken" type="password" value="${ghToken}" placeholder="ghp_...">
+        <button class="btn btn-primary btn-sm" onclick="saveGhToken()">OK</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:4px">Создай токен: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens. Права: Contents (Read and write) для репозитория mini-app-test.</p>
+    </div>
     <div class="info-card">
-      <p>☁️ Все изменения сохраняются в облако и видны <b>всем</b> пользователям приложения.</p>
+      <p>☁️ Все изменения сохраняются в GitHub и видны <b>всем</b> пользователям приложения. Обновление на сайте появляется через 1–2 минуты.</p>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="exportData()">📥 Экспорт data.json</button>
       <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="resetToDefaults()">🔄 Сбросить к исходным</button>
     </div>`;
+}
+
+function saveGhToken() {
+  ghToken = document.getElementById('settingGhToken').value.trim();
+  localStorage.setItem('gh_token', ghToken);
+  showToast('Token сохранён', false);
 }
 
 function adminLogin() {
