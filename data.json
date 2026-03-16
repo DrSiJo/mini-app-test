@@ -6,16 +6,6 @@
   },
   "lessons": [
     {
-      "id": 5,
-      "dayOfWeek": 1,
-      "timeStart": "10:45",
-      "timeEnd": "12:15",
-      "subject": "Английский язык",
-      "teacher": "Смирнова Е.А.",
-      "room": "305",
-      "type": "Практика"
-    },
-    {
       "id": 6,
       "dayOfWeek": 2,
       "timeStart": "09:00",
